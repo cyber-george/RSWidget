@@ -207,7 +207,7 @@ $("save").onclick=async()=>{
     });
     const d=await r.json();
     if(d.ok){
-      st.textContent=d.pushed?"Saved and pushed to your Discord profile!":"Saved — but the push to Discord failed (check RSN / bot token).";
+      st.textContent=d.pushed?"Saved and pushed to your Discord profile!":"Saved — but the push failed at stage \""+(d.pushDetail?.stage||"?")+"\": "+(d.pushDetail?.detail||"unknown")+(d.pushDetail?.status?" (HTTP "+d.pushDetail.status+")":"");
       st.className="status "+(d.pushed?"ok":"err");
       if(d.portraitToken){
         const tb=$("tokenbox"); tb.style.display="block";
