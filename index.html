@@ -64,28 +64,22 @@
 
       <label>RuneScape name</label>
       <input id="rsn" maxlength="12" placeholder="e.g. Lynx Titan">
-      <div class="row">
-        <div>
-          <label>Game mode</label>
-          <select id="gamemode">
-            <option value="main">Main</option>
-            <option value="ironman">Ironman</option>
-            <option value="hcim">Hardcore Ironman</option>
-            <option value="uim">Ultimate Ironman</option>
-            <option value="gim">Group Ironman (Ranked)</option>
-            <option value="gim_u">Group Ironman (Unranked)</option>
-            <option value="hgim">Hardcore Group Ironman</option>
-          </select>
-        </div>
-        <div>
-          <label>Clan name (optional)</label>
-          <input id="clan" maxlength="40" placeholder="Clan name">
-        </div>
-      </div>
-      <label>Custom text line 1</label>
-      <input id="line1" maxlength="60" placeholder="e.g. Maxed btw">
-      <label>Custom text line 2</label>
-      <input id="line2" maxlength="60" placeholder="e.g. Infernal cape haver">
+      <label>Game mode (sets which hiscores your stats come from)</label>
+      <select id="gamemode">
+        <option value="main">Main</option>
+        <option value="ironman">Ironman</option>
+        <option value="hcim">Hardcore Ironman</option>
+        <option value="uim">Ultimate Ironman</option>
+        <option value="gim">Group Ironman (Ranked)</option>
+        <option value="gim_u">Group Ironman (Unranked)</option>
+        <option value="hgim">Hardcore Group Ironman</option>
+      </select>
+      <label>Custom line 1 — emojis welcome (press Win + . for the emoji picker)</label>
+      <input id="line1" maxlength="60" placeholder="e.g. Group Ironman ⚔️">
+      <label>Custom line 2</label>
+      <input id="line2" maxlength="60" placeholder="e.g. Iron Forged 🛡️">
+      <label>Custom line 3</label>
+      <input id="line3" maxlength="60" placeholder="e.g. leader of the schnibs">
 
       <label>Six stat slots (skill or boss name from the hiscores)</label>
       <div class="slots" id="slots"></div>
@@ -106,8 +100,7 @@
         <div class="w-top">
           <div>
             <div class="w-name"><span id="p-name">RS name</span><img id="p-mode" src="assets/gamemode-main.png" alt="" onerror="this.style.display='none'"></div>
-            <div class="w-clan" id="p-clan">clan name</div>
-            <div class="w-lines"><div id="p-line1">customizable text</div><div id="p-line2">customizable text</div></div>
+            <div class="w-lines"><div id="p-line1">customizable text</div><div id="p-line2">customizable text</div><div id="p-line3">customizable text</div></div>
           </div>
           <div class="w-portrait" id="p-portrait">portrait of<br>runescape<br>character</div>
         </div>
@@ -156,7 +149,7 @@ $("connect").onclick=()=>location.href=WORKER_URL+"/auth/login";
 ["rsn","gamemode"].forEach(id=>$(id).addEventListener("input",()=>{
   clearTimeout(debounce); debounce=setTimeout(fetchPreview,600);
 }));
-["clan","line1","line2","portrait"].forEach(id=>$(id).addEventListener("input",renderText));
+["line1","line2","line3","portrait"].forEach(id=>$(id).addEventListener("input",renderText));
 
 async function fetchPreview(){
   const rsn=$("rsn").value.trim(); if(!rsn) return;
@@ -168,9 +161,9 @@ async function fetchPreview(){
 }
 function renderText(){
   $("p-name").textContent=(hiscores&&hiscores.name)||$("rsn").value||"RS name";
-  $("p-clan").textContent=$("clan").value||"clan name";
   $("p-line1").textContent=$("line1").value||"customizable text";
   $("p-line2").textContent=$("line2").value||"customizable text";
+  $("p-line3").textContent=$("line3").value||"customizable text";
   $("p-mode").src="assets/gamemode-"+$("gamemode").value+".png";
   const pu=$("portrait").value.trim();
   $("p-portrait").innerHTML=pu?`<img src="${pu}" alt="portrait">`:"portrait of<br>runescape<br>character";
@@ -200,7 +193,7 @@ $("save").onclick=async()=>{
       headers:{"Content-Type":"application/json",Authorization:`Bearer ${auth.uid}:${auth.session}`},
       body:JSON.stringify({
         rsn:$("rsn").value.trim(), gamemode:$("gamemode").value,
-        clan:$("clan").value, line1:$("line1").value, line2:$("line2").value,
+        line1:$("line1").value, line2:$("line2").value, line3:$("line3").value,
         slots:[...slotsEl.children].map(i=>i.value.trim()),
         portraitUrl:$("portrait").value.trim()||undefined
       })
