@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RSWidget — OSRS stats on your Discord profile</title>
+<style>
+  :root{
+    --bg:#1a1a1e; --panel:#232328; --panel2:#2b2b31; --border:#3a3a42;
+    --text:#e8e8ea; --muted:#9a9aa3; --accent:#c8a24a; --accent2:#8f6b1f;
+    --widget-bg:#d6d6d6; --widget-text:#141414;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'gg sans','Segoe UI',system-ui,sans-serif;min-height:100vh}
+  .wrap{max-width:1060px;margin:0 auto;padding:32px 20px}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  header h1{font-size:28px;letter-spacing:.5px}
+  header h1 span{color:var(--accent)}
+  .tag{color:var(--muted);margin-bottom:28px}
+  .grid{display:grid;grid-template-columns:1fr 460px;gap:28px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px}
+  .card h2{font-size:15px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:16px}
+  label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+  input,select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:14px}
+  input:focus,select:focus{outline:none;border-color:var(--accent)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  button{cursor:pointer;border:none;border-radius:8px;padding:11px 18px;font-size:14px;font-weight:600}
+  .btn-discord{background:#5865F2;color:#fff;width:100%;margin-bottom:6px}
+  .btn-gold{background:linear-gradient(180deg,var(--accent),var(--accent2));color:#141414;width:100%;margin-top:18px}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .status{font-size:13px;margin-top:10px;color:var(--muted);min-height:18px}
+  .status.ok{color:#7bd88f}.status.err{color:#f08080}
+
+  /* ---- Widget preview (mimics the mockup / Discord board card) ---- */
+  .widget{background:var(--widget-bg);color:var(--widget-text);border-radius:10px;padding:16px;font-family:inherit}
+  .widget .brand{font-weight:700;font-size:13px;margin-bottom:8px}
+  .w-top{display:grid;grid-template-columns:1fr 150px;gap:12px}
+  .w-name{display:flex;align-items:center;gap:8px;font-size:22px;font-weight:800}
+  .w-name img{width:22px;height:22px;image-rendering:pixelated}
+  .w-clan{font-size:13px;margin-top:2px}
+  .w-lines{font-size:13px;font-weight:600;margin-top:12px;line-height:1.5}
+  .w-portrait{border:3px solid #141414;border-radius:6px;height:170px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;font-weight:600;background:#cfcfcf;overflow:hidden}
+  .w-portrait img{width:100%;height:100%;object-fit:cover}
+  .w-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-top:14px}
+  .w-stat{border:1.5px solid #141414;border-radius:8px;padding:8px 6px;text-align:center;background:#cfcfcf}
+  .w-stat .lbl{font-size:11px;font-weight:600}
+  .w-stat .val{font-size:16px;font-weight:800;margin-top:2px}
+  .note{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.5}
+  .tokenbox{font-family:monospace;font-size:12px;background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:8px;margin-top:8px;word-break:break-all;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>RS<span>Widget</span></h1></header>
+  <p class="tag">Show your Old School RuneScape character on your Discord profile — right from the browser, nothing to download.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>1 · Connect &amp; configure</h2>
+      <button class="btn-discord" id="connect">Connect Discord</button>
+      <div class="status" id="authStatus">Not connected.</div>
+
+      <label>RuneScape name</label>
+      <input id="rsn" maxlength="12" placeholder="e.g. Lynx Titan">
+      <div class="row">
+        <div>
+          <label>Game mode</label>
+          <select id="gamemode">
+            <option value="main">Main</option>
+            <option value="ironman">Ironman</option>
+            <option value="hcim">Hardcore Ironman</option>
+            <option value="uim">Ultimate Ironman</option>
+            <option value="gim">Group Ironman (Ranked)</option>
+            <option value="gim_u">Group Ironman (Unranked)</option>
+            <option value="hgim">Hardcore Group Ironman</option>
+          </select>
+        </div>
+        <div>
+          <label>Clan name (optional)</label>
+          <input id="clan" maxlength="40" placeholder="Clan name">
+        </div>
+      </div>
+      <label>Custom text line 1</label>
+      <input id="line1" maxlength="60" placeholder="e.g. Maxed btw">
+      <label>Custom text line 2</label>
+      <input id="line2" maxlength="60" placeholder="e.g. Infernal cape haver">
+
+      <label>Six stat slots (skill or boss name from the hiscores)</label>
+      <div class="slots" id="slots"></div>
+
+      <label>Portrait image URL (optional — auto-filled by the RuneLite plugin, later)</label>
+      <input id="portrait" placeholder="https://...">
+
+      <button class="btn-gold" id="save" disabled>Save &amp; push to Discord</button>
+      <div class="status" id="saveStatus"></div>
+      <div class="tokenbox" id="tokenbox"></div>
+      <p class="note">After saving, open Discord → Profile → Board → Add Widget and pick <b>RSWidget</b>. Stats auto-refresh every 30 minutes.</p>
+    </div>
+
+    <div class="card">
+      <h2>2 · Live preview</h2>
+      <div class="widget">
+        <div class="brand">RSWidget</div>
+        <div class="w-top">
+          <div>
+            <div class="w-name"><span id="p-name">RS name</span><img id="p-mode" src="assets/gamemode-main.png" alt="" onerror="this.style.display='none'"></div>
+            <div class="w-clan" id="p-clan">clan name</div>
+            <div class="w-lines"><div id="p-line1">customizable text</div><div id="p-line2">customizable text</div></div>
+          </div>
+          <div class="w-portrait" id="p-portrait">portrait of<br>runescape<br>character</div>
+        </div>
+        <div class="w-stats" id="p-stats"></div>
+      </div>
+      <p class="note">Preview uses live hiscores data via the RSWidget backend. The final look inside Discord follows Discord's widget layout, so spacing may differ slightly.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======== CONFIG: point this at your deployed Cloudflare Worker ======== */
+const WORKER_URL = "https://rswidget.paradys.workers.dev";
+
+const DEFAULT_SLOTS = ["Attack","Strength","Defence","Slayer","Zulrah","Vorkath"];
+const SKILLS = ["Overall","Attack","Defence","Strength","Hitpoints","Ranged","Prayer","Magic","Cooking","Woodcutting","Fletching","Fishing","Firemaking","Crafting","Smithing","Mining","Herblore","Agility","Thieving","Slayer","Farming","Runecraft","Hunter","Construction","Sailing"];
+
+const $ = (id) => document.getElementById(id);
+let auth = null;      // { uid, session, name }
+let hiscores = null;  // cached preview data
+let debounce;
+
+/* slots UI */
+const slotsEl = $("slots");
+DEFAULT_SLOTS.forEach((v,i)=>{
+  const inp=document.createElement("input");
+  inp.value=v; inp.dataset.i=i; inp.placeholder="Skill or boss";
+  inp.addEventListener("input",renderStats);
+  slotsEl.appendChild(inp);
+});
+
+/* auth: worker redirects back with #session=..&uid=..&name=.. */
+(function(){
+  const h=new URLSearchParams(location.hash.slice(1));
+  if(h.get("session")){
+    auth={uid:h.get("uid"),session:h.get("session"),name:h.get("name")};
+    history.replaceState(null,"",location.pathname);
+    $("authStatus").textContent="Connected as "+auth.name;
+    $("authStatus").className="status ok";
+    $("save").disabled=false;
+  }
+})();
+$("connect").onclick=()=>location.href=WORKER_URL+"/auth/login";
+
+/* live preview */
+["rsn","gamemode"].forEach(id=>$(id).addEventListener("input",()=>{
+  clearTimeout(debounce); debounce=setTimeout(fetchPreview,600);
+}));
+["clan","line1","line2","portrait"].forEach(id=>$(id).addEventListener("input",renderText));
+
+async function fetchPreview(){
+  const rsn=$("rsn").value.trim(); if(!rsn) return;
+  try{
+    const r=await fetch(`${WORKER_URL}/api/preview?rsn=${encodeURIComponent(rsn)}&gamemode=${$("gamemode").value}`);
+    hiscores=r.ok?await r.json():null;
+  }catch{hiscores=null}
+  renderText(); renderStats();
+}
+function renderText(){
+  $("p-name").textContent=(hiscores&&hiscores.name)||$("rsn").value||"RS name";
+  $("p-clan").textContent=$("clan").value||"clan name";
+  $("p-line1").textContent=$("line1").value||"customizable text";
+  $("p-line2").textContent=$("line2").value||"customizable text";
+  $("p-mode").src="assets/gamemode-"+$("gamemode").value+".png";
+  const pu=$("portrait").value.trim();
+  $("p-portrait").innerHTML=pu?`<img src="${pu}" alt="portrait">`:"portrait of<br>runescape<br>character";
+}
+function renderStats(){
+  const box=$("p-stats"); box.innerHTML="";
+  [...slotsEl.children].forEach(inp=>{
+    const name=inp.value.trim();
+    let val="—";
+    if(hiscores){
+      const s=(hiscores.skills||[]).find(x=>x.name.toLowerCase()===name.toLowerCase());
+      const a=(hiscores.activities||[]).find(x=>x.name.toLowerCase()===name.toLowerCase());
+      if(s) val=s.level; else if(a&&a.score>0) val=a.score;
+    }
+    box.insertAdjacentHTML("beforeend",
+      `<div class="w-stat"><div class="lbl">${name||"—"}</div><div class="val">${val}</div></div>`);
+  });
+}
+renderStats();
+
+/* save */
+$("save").onclick=async()=>{
+  const st=$("saveStatus"); st.textContent="Pushing to Discord…"; st.className="status";
+  try{
+    const r=await fetch(WORKER_URL+"/api/register",{
+      method:"POST",
+      headers:{"Content-Type":"application/json",Authorization:`Bearer ${auth.uid}:${auth.session}`},
+      body:JSON.stringify({
+        rsn:$("rsn").value.trim(), gamemode:$("gamemode").value,
+        clan:$("clan").value, line1:$("line1").value, line2:$("line2").value,
+        slots:[...slotsEl.children].map(i=>i.value.trim()),
+        portraitUrl:$("portrait").value.trim()||undefined
+      })
+    });
+    const d=await r.json();
+    if(d.ok){
+      st.textContent=d.pushed?"Saved and pushed to your Discord profile!":"Saved — but the push to Discord failed (check RSN / bot token).";
+      st.className="status "+(d.pushed?"ok":"err");
+      if(d.portraitToken){
+        const tb=$("tokenbox"); tb.style.display="block";
+        tb.textContent="RuneLite portrait plugin token (keep private): "+d.portraitToken;
+      }
+    } else { st.textContent="Error: "+(d.error||"unknown"); st.className="status err"; }
+  }catch(e){ st.textContent="Network error: "+e; st.className="status err"; }
+};
+</script>
+</body>
+</html>
